@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Modern Web Calculator</title>
+<style>
+  /* Reset */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: #121212;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #fff;
+  }
+  .calculator {
+    background: #1e1e1e;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    width: 320px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+  }
+  .display {
+    background: #2c2c2c;
+    border-radius: 12px;
+    font-size: 2rem;
+    padding: 20px 16px;
+    margin-bottom: 24px;
+    text-align: right;
+    word-wrap: break-word;
+    min-height: 60px;
+    color: #00ffa3;
+    user-select: none;
+  }
+  .buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-gap: 16px;
+  }
+  button {
+    background: #333;
+    border: none;
+    border-radius: 12px;
+    color: #eee;
+    font-size: 1.25rem;
+    padding: 18px 0;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    user-select: none;
+  }
+  button:hover {
+    background: #00ffa3;
+    color: #121212;
+    box-shadow: 0 6px 12px rgba(0,255,163,0.5);
+  }
+  button.operator {
+    background: #00ffa3;
+    color: #121212;
+  }
+  button.operator:hover {
+    background: #00cc80;
+    box-shadow: 0 6px 12px rgba(0,204,128,0.6);
+  }
+  button.span-two {
+    grid-column: span 2;
+  }
+</style>
+</head>
+<body>
+  <div class="calculator" role="application" aria-label="Calculator">
+    <div class="display" id="display" aria-live="polite" aria-atomic="true">0</div>
+    <div class="buttons">
+      <button id="clear" aria-label="Clear">C</button>
+      <button id="delete" aria-label="Delete">DEL</button>
+      <button class="operator" data-operation="/">÷</button>
+      <button class="operator" data-operation="*">×</button>
+
+      <button data-number="7">7</button>
+      <button data-number="8">8</button>
+      <button data-number="9">9</button>
+      <button class="operator" data-operation="-">−</button>
+
+      <button data-number="4">4</button>
+      <button data-number="5">5</button>
+      <button data-number="6">6</button>
+      <button class="operator" data-operation="+">+</button>
+
+      <button data-number="1">1</button>
+      <button data-number="2">2</button>
+      <button data-number="3">3</button>
+      <button id="equals" class="operator" style="grid-row: span 2;">=</button>
+
+      <button data-number="0" class="span-two">0</button>
+      <button data-number=".">.</button>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const display = document.getElementById('display');
+      const buttons = document.querySelectorAll('button');
+      let currentInput = '0';
+      let previousInput = null;
+      let operation = null;
+      let resetNext = false;
+
+      function updateDisplay() {
+        display.textContent = currentInput;
+      }
+
+      function appendNumber(number) {
+        if (resetNext) {
+          currentInput = '';
+          resetNext = false;
+        }
+
+        if (number === '.' && currentInput.includes('.')) return;
+
+        if (currentInput === '0' && number !== '.') {
+          currentInput = number;
+        } else {
+          currentInput += number;
+        }
+      }
+
+      function chooseOperation(op) {
+        if (operation !== null) {
+          compute();
+        }
+        previousInput = currentInput;
+        operation = op;
+        resetNext = true;
+      }
+
+      function compute() {
+        let computation;
+        const prev = parseFloat(previousInput);
+        const current = parseFloat(currentInput);
+        if (isNaN(prev) || isNaN(current)) return;
+
+        switch(operation) {
+          case '+':
+            computation = prev + current;
+            break;
+          case '-':
+            computation = prev - current;
+            break;
+          case '*':
+            computation = prev * current;
+            break;
+          case '/':
+            if (current === 0) {
+              computation = 'Error';
+              break;
+            }
+            computation = prev / current;
+            break;
+          default:
+            return;
+        }
+        currentInput = computation.toString();
+        operation = null;
+        previousInput = null;
+      }
+
+      function clear() {
+        currentInput = '0';
+        previousInput = null;
+        operation = null;
+        resetNext = false;
+      }
+
+      function deleteLast() {
+        if (resetNext) return; // avoid deleting after operation
+
+        if (currentInput.length === 1) {
+          currentInput = '0';
+        } else {
+          currentInput = currentInput.slice(0, -1);
+        }
+      }
+
+      buttons.forEach(button => {
+        button.addEventListener('click', () => {
+          if (button.hasAttribute('data-number')) {
+            appendNumber(button.getAttribute('data-number'));
+            updateDisplay();
+            return;
+          }
+          if (button.hasAttribute('data-operation')) {
+            chooseOperation(button.getAttribute('data-operation'));
+            updateDisplay();
+            return;
+          }
+          switch(button.id) {
+            case 'clear':
+              clear();
+              updateDisplay();
+              break;
+            case 'delete':
+              deleteLast();
+              updateDisplay();
+              break;
+            case 'equals':
+              compute();
+              updateDisplay();
+              resetNext = true;
+              break;
+          }
+        });
+      });
+
+      // Keyboard Support
+      window.addEventListener('keydown', e => {
+        if ((e.key >= '0' && e.key <= '9') || e.key === '.') {
+          appendNumber(e.key);
+          updateDisplay();
+        } else if (e.key === '+' || e.key === '-' || e.key === '*' || e.key === '/') {
+          chooseOperation(e.key);
+          updateDisplay();
+        } else if (e.key === 'Enter' || e.key === '=') {
+          e.preventDefault();
+          compute();
+          updateDisplay();
+          resetNext = true;
+        } else if (e.key === 'Backspace') {
+          deleteLast();
+          updateDisplay();
+        } else if (e.key.toLowerCase() === 'c') {
+          clear();
+          updateDisplay();
+        }
+      });
+
+      updateDisplay();
+
+    })();
+  </script>
+</body>
+</html>
+
